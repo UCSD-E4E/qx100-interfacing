@@ -4,47 +4,9 @@
 
 import json
 import requests
-import numpy as np
-import cv2
 import threading
-from cmd import Cmd
 
-class LiveviewThread(threading.Thread):
-    running = True
-    def __init(self, url):
-	threading.Thread.__init__(self)
-	self.url = url
-	self.running = True
-    def run(self):
-	s = start_liveview()
-	data = open_stream(s)
-	while self.running:
-	    jpg = decode_frame(data)
-	    show_img(jpg)
-	data.raw.close()
-	cv2.destroyWindow('liveview')
-    def stop_running(self):
-	self.running = False
-
-class MyPrompt(Cmd):
-    LVthread = LiveviewThread()
-    def do_t(self, args):
-        take_picture()
-
-    def do_loop(self, args):
-        for i in range(int(args)):
-            take_picture()
-            print i
-
-    def do_start_liveview(self, args):
-        self.LVthread.start()
-
-    def do_stop_liveview(self, args):
-        self.LVthread.stop_running()
-
-    def do_quit(self, args):
-        self.do_stop_liveview([])
-        raise SystemExit
+import time
 
 def get_payload(method, params):
     return {
@@ -102,6 +64,10 @@ def decode_frame(data):
     frameno = int(data.raw.read(2).encode('hex'), 16)
     timestamp = int(data.raw.read(4).encode('hex'), 16)
 
+    decode_frame.last_time = decode_frame.current_time
+    decode_frame.current_time = time.time()
+    print decode_frame.current_time - decode_frame.last_time
+
     # decode liveview header
     start = int(data.raw.read(4).encode('hex'), 16)
     if(start != 0x24356879):
@@ -122,15 +88,15 @@ def decode_frame(data):
     data.raw.read(pad_size)
 
     return jpg_data
+    
+decode_frame.current_time = 0
+decode_frame.last_time = 0
 
-def show_img(str_jpg):
-    nparr = np.fromstring(str_jpg, np.uint8)
-    img_np = cv2.imdecode(nparr, cv2.CV_LOAD_IMAGE_COLOR)
-
-    cv2.namedWindow('liveview', flags=cv2.CV_WINDOW_AUTOSIZE)
-    cv2.imshow('liveview', img_np)
-    cv2.waitKey(1)
-
-prompt = MyPrompt()
-prompt.prompt = '> '
-prompt.cmdloop('starting qx100 control')
+s = start_liveview()
+data = open_stream(s)
+while True:
+    jpg = decode_frame(data)
+    f = open('/tmp/pic.jpg', 'w')
+    f.write(jpg)
+    f.close()
+data.raw.close()
