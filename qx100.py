@@ -64,9 +64,15 @@ def decode_frame(data):
     frameno = int(data.raw.read(2).encode('hex'), 16)
     timestamp = int(data.raw.read(4).encode('hex'), 16)
 
-    decode_frame.last_time = decode_frame.current_time
+#    decode_frame.last_time = decode_frame.current_time
     decode_frame.current_time = time.time()
-    print decode_frame.current_time - decode_frame.last_time
+#    time_btwn_frames = decode_frame.current_time - decode_frame.last_time
+#    if time_btwn_frames > 0.04:
+#        print time_btwn_frames
+    time_discrepancy = decode_frame.current_time - decode_frame.last_time - timestamp/1000.0
+
+    if time_discrepancy > 0.2:
+        print 'frame with discrepancy %f'%time_discrepancy
 
     # decode liveview header
     start = int(data.raw.read(4).encode('hex'), 16)
@@ -90,7 +96,7 @@ def decode_frame(data):
     return jpg_data
     
 decode_frame.current_time = 0
-decode_frame.last_time = 0
+decode_frame.last_time = time.time()
 
 s = start_liveview()
 data = open_stream(s)
@@ -99,4 +105,5 @@ while True:
     f = open('/tmp/pic.jpg', 'w')
     f.write(jpg)
     f.close()
+    time.sleep(0.01)
 data.raw.close()
